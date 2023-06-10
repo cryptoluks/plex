@@ -1,0 +1,40 @@
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  '0 3 1 * *'
+
+env:
+  REGISTRY: ghcr.io
+  REPO: ${{ github.repository }}
+  
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plex:
+    env:
+      IMAGE: plex
+      IMAGE_TAG: latest
+    runs-on: ubuntu-latest
+    steps:
+    - name: Login to ${{ env.REGISTRY }} as ${{ github.actor }}
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Set DST env var
+      run: |
+        echo "DST=${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.IMAGE_TAG }}" >> $GITHUB_ENV
+    - name: Clone repository
+      uses: actions/checkout@v3
+    - name: Set up docker buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Build and push the image to ${{ env.DST }}
+      uses: docker/build-push-action@v4
+      with:
+        context: plex
+        push: true
+        tags: ${{ env.DST }}
+        platforms: linux/amd64, linux/arm64
