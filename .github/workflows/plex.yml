@@ -2,10 +2,13 @@ on:
   workflow_dispatch:
   schedule:
     - cron:  '0 3 1 * *'
+  push:
+    paths:
+      - plex/**
 
 env:
   REGISTRY: ghcr.io
-  REPO: ${{ github.repository }}
+  DST: ghcr.io/${{ github.repository }}:latest
   
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -13,9 +16,6 @@ concurrency:
 
 jobs:
   plex:
-    env:
-      IMAGE: plex
-      IMAGE_TAG: latest
     runs-on: ubuntu-latest
     steps:
     - name: Login to ${{ env.REGISTRY }} as ${{ github.actor }}
@@ -24,9 +24,6 @@ jobs:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Set DST env var
-      run: |
-        echo "DST=${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.IMAGE_TAG }}" >> $GITHUB_ENV
     - name: Clone repository
       uses: actions/checkout@v3
     - name: Set up docker buildx
@@ -38,3 +35,5 @@ jobs:
         push: true
         tags: ${{ env.DST }}
         platforms: linux/amd64, linux/arm64
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
